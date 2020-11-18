@@ -14,7 +14,7 @@
 [阿里云 Python与设计模式](https://zhuanlan.zhihu.com/p/31675841)
 
 
-# 一下是自己工作中常用的 设计模式
+# 下面是自己工作中常用的 设计模式
 
 # 创建型模式
 [工厂方法模式](https://zhuanlan.zhihu.com/p/272619987)
