@@ -10,4 +10,5 @@
 
 这里总计了自己工作中常用的设计模式
 
-主要参考 阿里云开发者社区 Python与设计模式  https://zhuanlan.zhihu.com/p/31675841
+主要参考 阿里云 Python与设计模式  
+[阿里云 Python与设计模式](https://zhuanlan.zhihu.com/p/31675841)
