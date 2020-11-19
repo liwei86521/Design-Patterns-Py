@@ -1,98 +1,78 @@
 # -*- coding:utf-8 -*-
 
 """
-案例：电梯控制器
-电梯在我们周边随处可见，电梯的控制逻辑中心是由电梯控制器实现的。电梯的控制逻辑，即使简单点设计，把状态分成开门状态，
-停止状态和运行状态，操作分成开门、关门、运行、停止，那流程也是很复杂的。首先，开门状态不能开门、运行、停止；
-停止状态不能关门，停止；运行状态不能开门、关门、运行。要用一个一个if…else…实现，首先代码混乱，不易维护；二是不易扩展。
-那该如何实现？在上边的逻辑中，每个操作仅仅是一个操作，状态切换与操作是分离的，这也造成后来操作和状态“相互配合”的“手忙脚乱”。
-如果把状态抽象成一个类，每个状态为一个子类，每个状态实现什么操作，不实现什么操作，仅仅在这个类中具体实现就可以了。
+当控制一个对象的状态转换的条件表达式过于复杂时,把状态的判断逻辑转移到
+表示不同状态的一系列类当中,可以把复杂的判断逻辑简化
 """
 
 #先实现抽象的状态类：
-class LiftState:
-    def open(self):
-        pass
-    def close(self):
-        pass
-    def run(self):
-        pass
-    def stop(self):
+class State(object):
+    def __init__(self):
         pass
 
-#实现各个具体的状态类：
-class OpenState(LiftState):
-    def open(self):
-        print("OPEN:The door is opened...")
-        return self
-    def close(self):
-        print ("OPEN:The door start to close...")
-        print ("OPEN:The door is closed")
-        return StopState()
-    def run(self):
-        print ("OPEN:Run Forbidden.")
-        return self
-    def stop(self):
-        print ("OPEN:Stop Forbidden.")
-        return self
+    def coding(self, w): # 写代码
+        pass
 
-class RunState(LiftState):
-    def open(self):
-        print("RUN:Open Forbidden.")
-        return self
-    def close(self):
-        print("RUN:Close Forbidden.")
-        return self
-    def run(self):
-        print("RUN:The lift is running...")
-        return self
-    def stop(self):
-        print("RUN:The lift start to stop...")
-        print("RUN:The lift stopped...")
-        return StopState()
+class ForenoonState(State):
+    def coding(self, w): # w 对应的是 一个对象 eg: Context()
+        if w.hour < 12:
+            print(f"当前时间: {w.hour} 点, 精神百倍")
+        else:
+            w.setState(AfternoonState())
+            w.coding()
 
-class StopState(LiftState):
-    def open(self):
-        print ("STOP:The door is opening...")
-        print ("STOP:The door is opened...")
-        return OpenState()
-    def close(self):
-        print("STOP:Close Forbidden")
-        return self
-    def run(self):
-        print("STOP:The lift start to run...")
-        return RunState()
-    def stop(self):
-        print("STOP:The lift is stopped.")
-        return self
+class AfternoonState(State):
+    def coding(self, w):
+        if w.hour < 17:
+            print(f"当前时间: {w.hour}点, 状态还行,继续努力")
+        else:
+            w.setState(EveningState())
+            w.coding()
+
+class EveningState(State):
+    def coding(self, w):
+        if w.hour < 21:
+            print(f"当前时间: {w.hour}点, 加班呢,疲劳了")
+        else:
+            w.setState(SleepState())
+            w.coding()
+
+class SleepState(State):
+    def coding(self, w):
+        print(f"当前时间: {w.hour}点, 不行了,睡着了")
 
 #为在业务中调度状态转移，还需要将上下文进行记录，需要一个上下文的类。
-class Context:
-    lift_state=""
-    def getState(self):
-        return self.lift_state
-    def setState(self,lift_state): # 把类对象传过来
-        self.lift_state=lift_state
+class Context(object):
+    currState=""
+    def __init__(self):
+        self.hour = 9
+        self.currState = ForenoonState()
 
-    def open(self):
-        self.setState(self.lift_state.open())
-    def close(self):
-        self.setState(self.lift_state.close())
-    def run(self):
-        self.setState(self.lift_state.run())
-    def stop(self):
-        self.setState(self.lift_state.stop())
+    def setState(self, currState):
+        self.currState = currState
 
-#在进行电梯的调度时，只需要调度Context就可以了。业务逻辑中如下所示：
-def test():
-    ctx = Context()
-    ctx.setState(StopState()) # 初始状态为停止状态
+    def coding(self):
+        self.currState.coding(self) # ps coding(self) 里面的 self 一定不能省略
 
-    ctx.open()
-    ctx.run()
-    ctx.close()
-    ctx.run()
-    ctx.stop()
 
-test()
-#由逻辑中可知，电梯先在STOP状态，然后开门，开门时运行Run，被禁止，然后，关门、运行、停止。
+def client():
+    ctx = Context() # 初始状态为 ForenoonState
+    ctx.coding()
+
+    ctx.hour = 15
+    ctx.coding()
+
+    ctx.hour = 20
+    ctx.coding()
+
+    ctx.hour = 22
+    ctx.coding()
+
+client()
+
+"""
+当前时间: 9 点, 精神百倍
+当前时间: 15点, 状态还行,继续努力
+当前时间: 20点, 加班呢,疲劳了
+当前时间: 22点, 不行了,睡着了
+"""
