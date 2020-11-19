@@ -1,68 +1,123 @@
 # -*- coding:utf-8 -*-
 
 """
-假设某司维护着一些客户资料，需要在该司有新产品上市或者举行新活动时通知客户。现通知客户的方式有两种：
-短信通知、邮件通知。应如何设计该系统的客户通知部分？为解决该问题，我们先构造客户类，
-包括客户常用的联系方式和基本信息，同时也包括要发送的内容。
+超市做活动，如果你的购物积分满1000，就可以按兑换现金抵用券10元，如果购买同一商品满10件，就可以打9折，
+如果如果购买的金额超过500，就可以享受满减50元的优惠。这是三个不同的促销策略。
 """
-class customer:
-    customer_name=""
-    snd_way=""
-    info=""
-    phone=""
-    email=""
+from collections import namedtuple
 
-    def setPhone(self,phone):
-        self.phone=phone
-    def setEmail(self,mail):
-        self.email=mail
-    def setInfo(self,info):
-        self.info=info
-    def setName(self,name):
-        self.customer_name=name
-    def setBrdWay(self,snd_way):
-        self.snd_way=snd_way
+class Item:
+    def __init__(self, name, price, quantity):
+        self.name = name
+        self.price = price
+        self.quantity = quantity
 
-    def getPhone(self):
-        return self.phone
-    def getEmail(self):
-        return self.email
+    def total(self):
+        return self.price * self.quantity
 
-    def sndMsg(self):
-        self.snd_way.send(self.info)
+class Order: #订单类  对应 Context
+    def __init__(self, customer, promotion=None):
+        self.cart = []
+        self.customer = customer
+        self.promotion = promotion
 
-#snd_way向客户发送信息的方式，该方式置为可设，即可根据业务来进行策略的选择。发送方式构建如下：
-class msgSender:
-    dst_code=""
-    def setCode(self,code):
-        self.dst_code=code
-    def send(self,info):
+    def add_to_cart(self, *items):
+        for item in items:
+            self.cart.append(item)
+
+    def total(self):
+        total = 0
+        for item in self.cart:
+            total += item.total()
+
+        return total
+
+    def due(self): # 实际应付的钱
+        if not self.promotion:
+            discount = 0
+        else:
+            discount  = self.promotion.discount(self) # self 就是 order 对象
+        return (self.total() - discount)
+
+# 策略类，它是一个抽象基类
+from abc import ABC, abstractmethod
+
+class Promotion(ABC): # 促销抽象类  对应 Stragety
+    @abstractmethod
+    def discount(self, order): # 抽象方法
         pass
-class emailSender(msgSender): # 邮件通知
-    def send(self,info):
-        print("EMAIL_ADDRESS:%s  INFO:%s"%(self.dst_code,info))
 
-class textSender(msgSender): # 短信通知
-    def send(self,info):
-        print("TEXT_CODE:%s  INFO:%s"%(self.dst_code,info))
+class FidelityPromo(Promotion): # 促销具体类的实现 1  ConcreteStragety
+    #如果积分满1000分，就可以兑换10元现金券
+    def discount(self, order): # fidelity  忠诚 积分
+        return 10 if order.customer.fidelity >1000 else 0
 
-#在业务场景中将发送方式作为策略，根据需求进行发送。
-def test():
-    customer_x = customer()
-    customer_x.setName("CUSTOMER_X")
-    customer_x.setPhone("10023456789")
-    customer_x.setEmail("customer_x@xmail.com")
-    customer_x.setInfo("Welcome to our new party!")
+class BulkItemPromo(Promotion): # 促销具体类的实现 2
+    #如果单项商品购买10件，即可9折。
+    def discount(self, order):
+        discount = 0
+        for item in order.cart:
+            if item.quantity >= 10:
+                discount += item.total() * 0.1
+        return discount
 
-    text_sender = textSender()
-    text_sender.setCode(customer_x.getPhone())
-    customer_x.setBrdWay(text_sender)
-    customer_x.sndMsg()
+class LargeOrderPromo(Promotion): # 促销具体类的实现 3
+    #如果订单总金额大于等于500，就可以立减50
+    def discount(self, order):
+        discount = 0
+        if order.total() >= 500:
+            discount = 50
 
-    mail_sender = emailSender()
-    mail_sender.setCode(customer_x.getEmail())
-    customer_x.setBrdWay(mail_sender)
-    customer_x.sndMsg()
+        return discount
 
-#以上述例子为例，customer类扮演的角色 直接依赖抽象策略的接口，在具体策略实现类中即可定义个性化的策略方式，且可以方便替换。
-test()
+# 测试 各种 打折
+def client_1():
+    Customer = namedtuple('Customer', 'name fidelity')
+    xm = Customer('小明', 1500)
+    item1 = Item('纸巾', 20, 10)
+    item2 = Item('食用油', 50, 4)
+    item3 = Item('牛奶', 50, 4)
+
+    order1 = Order(xm, FidelityPromo())
+    order1.add_to_cart(item1, item2, item3)
+    print(order1.total(), order1.due())  # 600 590
+
+    order2 = Order(xm, BulkItemPromo())
+    order2.add_to_cart(item1, item2, item3)
+    print(order2.total(), order2.due()) # 600 580.0
+
+    order3 = Order(xm, LargeOrderPromo())
+    order3.add_to_cart(item1, item2, item3)
+    print(order3.total(), order3.due())  # 600 550
+
+# client_1()
+
+# 良心的商家 能自动对比所有策略得出最优惠的价格来给到顾客。
+#print(globals()) # 可以打印出 所以的 全局 类 和 全局方法
+# 实现一个最优策略类
+class BestPromo(Promotion):
+    def discount(self, order):
+        # 找出当前文件中所有的策略
+        all_promotion = [globals()[name] for name in globals()  if name.endswith('Promo') and name != 'BestPromo']
+        #print("all_promotion: ", all_promotion) # [<class '__main__.FidelityPromo'>, <class '__main__.BulkItemPromo'>, <class '__main__.LargeOrderPromo'>]
+
+        # 计算最大折扣
+        bestStragetyVal = max([promo().discount(order) for promo in all_promotion])
+        bestStragety = [promo for promo in all_promotion if promo().discount(order) == bestStragetyVal]
+
+        print("bestStragety ---> ", bestStragety) # bestStragety --->  [<class '__main__.LargeOrderPromo'>]
+        return bestStragetyVal
+
+
+def client_2():
+    Customer = namedtuple('Customer', 'name fidelity')
+    xm = Customer('小明', 1500)
+    item1 = Item('纸巾', 20, 10)
+    item2 = Item('食用油', 50, 4)
+    item3 = Item('牛奶', 50, 4)
+
+    order1 = Order(xm, BestPromo())
+    order1.add_to_cart(item1, item2, item3)
+    print(order1.total(), order1.due())  # 600 590
+
+# client_2()
