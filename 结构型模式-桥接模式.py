@@ -1,51 +1,63 @@
 # -*- coding:utf-8 -*-
 
-class Shape:
-    name=""
-    param=""
-    def getName(self):
-        return self.name
-    def getParam(self):
-        return self.name, self.param
+#桥接模式(Bridge Pattern):将抽象部分与它的实现部分分离，使它们都可以独立地变化
+#程序实例:技能分类 和 人的分类 耦合度低 两种分类中间用一个set_skill桥接,可以实现调用不同的类，达到了解耦合的目的
 
-class Pen:
-    shape=""
-    type=""
-    def __init__(self,shape):
-        self.shape=shape
-    def draw(self):
+# 功能类：技能
+class Skill(object):
+    def have_skill(self):
         pass
 
-#形状对象和画笔对象是最为抽象的形式。接下来，构造多个形状，如矩形和圆形：
-class Rectangle(Shape):
-    def __init__(self,long,width):
-        self.name="Rectangle"
-        self.param="Long:%s Width:%s"%(long,width)
-        print ("Create a rectangle:%s"% self.param)
-class Circle(Shape):
-    def __init__(self,radius):
-        self.name="Circle"
-        self.param="Radius:%s"%radius
-        print("Create a circle:%s"% self.param)
+class S_code(Skill): # 具体功能类：编程
+    def have_skill(self):
+        print('我拥有编程技能！')
 
-#紧接着是构造多种画笔，如普通画笔和画刷：
-class NormalPen(Pen):
-    def __init__(self,shape):
-        Pen.__init__(self,shape) # 调用父类构造
-        self.type="Normal Line"
-    def draw(self):
-        print("DRAWING %s:%s----PARAMS:%s"%(self.type,self.shape.getName(),self.shape.getParam()))
-class BrushPen(Pen):
-    def __init__(self,shape):
-        Pen.__init__(self,shape)
-        self.type="Brush Line"
-    def draw(self):
-        print("DRAWING %s:%s----PARAMS:%s" % (self.type,self.shape.getName(), self.shape.getParam()))
+class S_teach(Skill): # 具体功能类：上课
+    def have_skill(self):
+        print('我拥有教书技能！')
 
-def test():
-    normal_pen=NormalPen(Rectangle("20cm","10cm"))
-    brush_pen=BrushPen(Circle("15cm"))
-    normal_pen.draw()
-    brush_pen.draw()
+class S_swim(Skill): #具体功能类： 游泳
+    def have_skill(self):
+        print('我拥有游泳技能！')
 
-test()
+#抽象类：人
+class Human(object):
+    skill = ""
+    def set_skill(self, skill):
+        self.skill = skill
+
+    def perform_skill(self):
+        pass
+
+# 具体抽象类：码农
+class Programmer(Human):
+    def perform_skill(self):  # 重写基类中的技能
+        print('我是码农，给我力量吧！')
+        self.skill.have_skill()
+
+# 具体抽象类：老师
+class Teacher(Human):
+    def perform_skill(self):  # 重写基类中的技能
+        print('我是教师，给我力量吧！')
+        self.skill.have_skill()
+
+def client():
+    skill_1 = S_code()  # 编程技能
+    skill_2 = S_teach()  # 教书技能
+    skill_3 = S_swim()  # 游泳技能
+
+    p = Programmer()  # 程序员
+    p.set_skill(skill_1)  # 赋予程序员编程技能
+    p.perform_skill()  # 演示这个技能
+    p.set_skill(skill_2)  # 赋予程序员教书技能
+    p.perform_skill()  # 演示教书技能
+
+    print("----------------------------------------")
+
+    t = Teacher()  # 教师
+    t.set_skill(skill_2)  # 赋予教师教书技能
+    t.perform_skill()  # 演示这个技能
+    t.set_skill(skill_3)  # 赋予教师游泳技能
+    t.perform_skill()  # 演示教书技能
+
+client()
