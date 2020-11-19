@@ -1,80 +1,174 @@
 # -*- coding:utf-8 -*-
 
 """
-访问者模式的定义：封装一些作用于某种数据结构中的各元素的操作，它可以在不改变数据结构的前提下定义于作用于这些元素的新操作。
-案例：药房业务系统
-假设一个药房，有一些大夫，一个药品划价员和一个药房管理员，它们通过一个药房管理系统组织工作流程。大夫开出药方后，
-药品划价员确定药品是否正常，价格是否正确；通过后药房管理员进行开药处理。该系统可以如何实现？最简单的想法，
-是分别用一个一个if…else…把划价员处理流程和药房管理流程实现，这样做的问题在于，扩展性不强，而且单一性不强，
-一旦有新药的加入或者划价流程、开药流程有些变动，会牵扯比较多的改动。今天介绍一种解决这类问题的模式：访问者模式。
-首先，构造药品类和工作人员类：
+访问者模式 --> 数据类 与 数据的处理分离
+数据类的处理方法我们叫它访问者，那么相同结构的数据面临不同的处理方式时，我们只需要创建不同的访问者
+我们假设一种场景：上市公司的原始财务数据，对于会计来说需要制作各种报表，对于财务总监来说需要
+分析公司业绩，对于战略顾问来说需要分析行业变化，我们来实现这一过程。
 """
-class Medicine:
-    name=""
-    price=0.0
-    def __init__(self,name,price):
-        self.name=name
-        self.price=price
-    def getName(self):
-        return self.name
-    def setName(self,name):
-        self.name=name
-    def getPrice(self):
-        return self.price
-    def setPrice(self,price):
-        self.price=price
-    def accept(self,visitor):
+
+class Finance:
+    """财务数据结构类"""
+    def __init__(self):
+        self.salesvolume = None  # 销售额
+        self.cost = None    # 成本
+        self.history_salesvolume = None  # 历史销售额
+        self.history_cost = None    # 历史成本
+
+    def set_salesvolume(self, value):
+        self.salesvolume = value
+
+    def set_cost(self, value):
+        self.cost = value
+
+    def set_history_salesvolume(self, value):
+        self.history_salesvolume = value
+
+    def set_history_cost(self, value):
+        self.history_cost = value
+
+    def accept(self, visitor): # 接收各种 visitor 对财务数据进行分析
         pass
-class Antibiotic(Medicine): #药品类中有两个子类，抗生素和感冒药
-    def accept(self,visitor):
-        visitor.visit(self)
-class Coldrex(Medicine):
-    def accept(self,visitor):
-        visitor.visit(self)
+
+class Finance_year(Finance):
+    """某一年的年财务数据类"""
+    def __init__(self, year):
+        Finance.__init__(self)
+        self.visitors = []  # 分析师列表
+        self.year = year
+
+    def add_visitor(self, visitor): # 添加分析师
+        self.visitors.append(visitor)
+
+    def accept(self): #分析师列表里面的人去分析数据
+        for obj in self.visitors:
+            obj.visit(self) # 传入的参数self 为 Finance_year 对象
+
+class Accounting: # 访问者 1
+    """会计类"""
+    def __init__(self):
+        self.ID = "会计"
+        self.Duty = "计算报表"
+
+    def visit(self, finance_year_obj):
+        print('会计年度： {}'.format(finance_year_obj.year))
+        print("我的身份是： {} 职责： {}".format(self.ID, self.Duty))
+        print('本年度纯利润： {}\n'.format(finance_year_obj.salesvolume - finance_year_obj.cost))
+
+class Audit: # 访问者 2
+    """财务总监类"""
+    def __init__(self):
+        self.ID = "财务总监"
+        self.Duty = "分析业绩"
+
+    def visit(self, finance_year_obj):
+        print('会计总监年度： {}'.format(finance_year_obj.year))
+        print("我的身份是： {} 职责： {}".format(self.ID, self.Duty))
+        if finance_year_obj.salesvolume - finance_year_obj.cost > finance_year_obj.history_salesvolume - finance_year_obj.history_cost:
+            msg = "较同期上涨"
+        else:
+            msg = "较同期下跌"
+        print('本年度公司业绩： {}\n'.format(msg))
+
+class Advisor: # 访问者 3
+    """战略顾问"""
+    def __init__(self):
+        self.ID = "战略顾问"
+        self.Duty = "制定明年战略"
+
+    def visit(self, finance_year_obj):
+        print('战略顾问年度： {}'.format(finance_year_obj.year))
+        print("我的身份是： {} 职责： {}".format(self.ID, self.Duty))
+        if finance_year_obj.salesvolume > finance_year_obj.history_salesvolume:
+            msg = "行业上行，扩大生产规模"
+        else:
+            msg = "行业下行，减小生产规模"
+        print('本年度公司业绩： {}\n'.format(msg))
+
+class AnalyseData:
+    """执行分析"""
+    def __init__(self):
+        self.datalist = []  # 需要处理的年度数据列表
+
+    def add_data(self, year_data):
+        self.datalist.append(year_data)
+
+    def remove_data(self, year_data):
+        self.datalist.remove(year_data)
+
+    def analysis_all_year_data(self):
+        for obj in self.datalist:
+            obj.accept()
+            print("******************************")
+
+def client():
+    finance_2018 = Finance_year(2018)  # 2018年的财务数据
+    finance_2018.set_salesvolume(200)
+    finance_2018.set_cost(90)
+    finance_2018.set_history_salesvolume(190)
+    finance_2018.set_history_cost(70)
+
+    accounting = Accounting()
+    audit = Audit()
+    advisor = Advisor()  # 顾问
+
+    finance_2018.add_visitor(accounting)  # 添加 visitor
+    finance_2018.add_visitor(audit)  # 添加 visitor
+    finance_2018.add_visitor(advisor)  # 添加 visitor
+
+    finance_2018.accept() # 直接处理
+
+# client()
+"""
+会计年度： 2018
+我的身份是： 会计 职责： 计算报表
+本年度纯利润： 110
+
+会计总监年度： 2018
+我的身份是： 财务总监 职责： 分析业绩
+本年度公司业绩： 较同期下跌
+
+战略顾问年度： 2018
+我的身份是： 战略顾问 职责： 制定明年战略
+本年度公司业绩： 行业上行，扩大生产规模
+"""
+
+def client2():
+    w = AnalyseData()  # 计划安排会计，总监，顾问对2018年数据处理
+    finance_2018 = Finance_year(2018)  # 2018年的财务数据
+    finance_2018.set_salesvolume(200)
+    finance_2018.set_cost(90)
+    finance_2018.set_history_salesvolume(190)
+    finance_2018.set_history_cost(70)
+
+    accounting = Accounting()
+    audit = Audit()
+    advisor = Advisor() # 顾问
+
+    finance_2018.add_visitor(accounting) # 添加 visitor
+    finance_2018.add_visitor(audit) # 添加 visitor
+    finance_2018.add_visitor(advisor) # 添加 visitor
+
+    w.add_data(finance_2018)
+
+# -------------------------------------------------------------
+
+    finance_2020 = Finance_year(2020)  # 2018年的财务数据
+    finance_2020.set_salesvolume(500)
+    finance_2020.set_cost(180)
+    finance_2020.set_history_salesvolume(400)
+    finance_2020.set_history_cost(200)
+
+    audit2 = Audit()
+    advisor2 = Advisor() # 顾问
+
+    finance_2020.add_visitor(audit2) # 添加 visitor
+    finance_2020.add_visitor(advisor2) # 添加 visitor
+
+    w.add_data(finance_2020)
+
+    w.analysis_all_year_data()
 
 
-class Visitor:
-    name=""
-    def setName(self,name):
-        self.name=name
-    def visit(self,medicine):
-        pass
-class Charger(Visitor):
-    def visit(self,medicine):
-        print ("CHARGE: %s lists the Medicine %s. Price:%s " % (self.name, medicine.getName(), medicine.getPrice()))
-class Pharmacy(Visitor):
-    def visit(self,medicine):
-        print ("PHARMACY:%s offers the Medicine %s. Price:%s" % (self.name, medicine.getName(), medicine.getPrice()))
+client2()
 
-#工作人员分为划价员和药房管理员。
-#在药品类中，有一个accept方法，其参数是个visitor；而工作人员就是从Visitor类中继承而来的，也就是说，他们就是Visitor，
-# 都包含一个visit方法，其参数又恰是medicine。药品作为处理元素，依次允许（Accept）Visitor对其进行操作
-
-#药方类的构建, 药方类将待处理药品进行整理，并组织Visitor依次处理
-class ObjectStructure:
-    pass
-class Prescription(ObjectStructure): #Prescription  处方
-    medicines=[]
-    def addMedicine(self,medicine):
-        self.medicines.append(medicine)
-    def rmvMedicine(self,medicine):
-        self.medicines.append(medicine)
-    def visit(self,visitor):
-        for medc in self.medicines:
-            medc.accept(visitor)
-
-def test(): #业务代码
-    yinqiao_pill = Coldrex("Yinqiao Pill", 2.0)
-    penicillin = Antibiotic("Penicillin", 3.0)
-    doctor_prsrp = Prescription()
-    doctor_prsrp.addMedicine(yinqiao_pill)
-    doctor_prsrp.addMedicine(penicillin)
-
-    charger = Charger() # 划价员
-    charger.setName("Doctor Strange")
-    pharmacy = Pharmacy() # 药房管理员
-    pharmacy.setName("Doctor Wei")
-    doctor_prsrp.visit(charger)
-    doctor_prsrp.visit(pharmacy)
-
-test()
